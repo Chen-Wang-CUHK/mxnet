@@ -5,13 +5,13 @@ The simple installation scripts set up MXNet for Python and R on computers runni
 
 ## Prepare environment for GPU Installation
 
-If you plan to build with GPU, you need to set up environemtn for CUDA and CUDNN.
+If you plan to build with GPU, you need to set up the environment for CUDA and CUDNN.
 
-First download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
+First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
 Then download [cudnn 5](https://developer.nvidia.com/cudnn).
 
-Unzip the file and change to cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
+Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
 
 ```bash
     tar xvzf cudnn-8.0-linux-x64-v5.1-ga.tgz
@@ -21,7 +21,7 @@ Unzip the file and change to cudnn root directory. Move the header and libraries
     sudo ldconfig
 ```
 
-Finally add configurations to config.mk file:
+Finally, add configurations to config.mk file:
 
 ```bash
     cp make/config.mk .
@@ -43,14 +43,13 @@ It takes around 5 minutes to complete the installation.
 ```bash
     # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
     git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-  
+
     # If building with GPU, add configurations to config.mk file:
     cd ~/mxnet
     cp make/config.mk .
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_DIST_KVSTORE=1" >>config.mk
 
     # Install MXNet for Python with all required dependencies
     cd ~/mxnet/setup-utils
@@ -64,6 +63,17 @@ It takes around 5 minutes to complete the installation.
 You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-python.sh).
 
 ### Install MXNet for R
+
+MXNet requires R-version to be 3.2.0 and above. If you are running an earlier version of R, run below commands to update your R version, before running the installation script.
+
+```bash
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+    sudo add-apt-repository ppa:marutter/rdev
+
+    sudo apt-get update
+    sudo apt-get upgrade
+    sudo apt-get install r-base r-base-dev
+```
 
 To install MXNet for R:
 
@@ -99,20 +109,24 @@ Install these dependencies using the following commands:
     sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 ```
 
-After you have downloaded and installed the dependencies, use the following commands to pull the MXNet source code from GitHub
+After installing the dependencies, use the following command to pull the MXNet source code from GitHub
 
 ```bash
-    git clone --recursive https://github.com/dmlc/mxnet
-```
-
-If building with GPU, add configurations to config.mk file:
-```bash
-    cd mxnet
+    # Get MXNet source code
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Move to source code parent directory
+    cd ~/mxnet
     cp make/config.mk .
+    echo "USE_BLAS=openblas" >>config.mk
+    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
+    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+```
+If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+```bash
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_DIST_KVSTORE=1" >>config.mk
 ```
 
 Then build mxnet:
@@ -123,7 +137,7 @@ Then build mxnet:
 
 Executing these commands creates a library called ```libmxnet.so```.
 
-Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](jupyter.readthedocs.io) used for running MXNet tutorials and examples.
+Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) used for running MXNet tutorials and examples.
 
 ```bash
     sudo apt-get install -y python-pip
@@ -134,9 +148,34 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
+- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
+
+### Install the MXNet Package for Python
+Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
+
+```bash
+	# Install MXNet Python package
+	cd python
+	sudo python setup.py install
+```
+
+Check if MXNet is properly installed.
+
+```bash
+	# You can change mx.cpu to mx.gpu
+	python
+	>>> import mxnet as mx
+	>>> a = mx.nd.ones((2, 3), mx.cpu())
+	>>> print ((a * 2).asnumpy())
+	[[ 2.  2.  2.]
+	 [ 2.  2.  2.]]
+```
+If you don't get an import error, then MXNet is ready for python.
+
+Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
 
 ### Install the MXNet Package for R
 
@@ -157,7 +196,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
 These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
 
 ```bash
-    R CMD INSTALL mxnet_0.7.tar.gz
+    R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 ### Install the MXNet Package for Julia
@@ -200,12 +239,12 @@ For Linux users, MXNet provides prebuilt binary packages that support computers 
 </dependency>
 ```
 
-For example, to download and build the 64-bit CPU-only version for OS X, use:
+For example, to download and build the 64-bit CPU-only version for Linux, use:
 
 ```HTML
 <dependency>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
+  <artifactId>mxnet-full_2.10-linux-x86_64-cpu</artifactId>
   <version>0.1.1</version>
 </dependency>
 ```

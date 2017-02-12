@@ -15,9 +15,11 @@
 
 namespace mxnet {
 namespace engine {
-
+#if MXNET_USE_PROFILER
+Profiler* Profiler::instance_ = new Profiler();
+#else
 Profiler* Profiler::instance_ = nullptr;
-std::mutex Profiler::m_;
+#endif
 const int INITIAL_SIZE = 1024;
 
 Profiler::Profiler()
@@ -27,12 +29,11 @@ Profiler::Profiler()
   // TODO(ziheng) get device number during execution
   int kMaxNumCpus = 64;
   this->cpu_num_ = kMaxNumCpus;
-
 #if MXNET_USE_CUDA
-  cudaError_t ret = cudaGetDeviceCount(reinterpret_cast<int*>(&this->gpu_num_));
-  if (ret != cudaSuccess) {
-    this->gpu_num_ = 0;
-  }
+  int kMaxNumGpus = 32;
+  this->gpu_num_ = kMaxNumGpus;
+#else
+  this->gpu_num_ = 0;
 #endif
 
   this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
@@ -53,15 +54,11 @@ Profiler::Profiler()
 }
 
 Profiler* Profiler::Get() {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
-  if (instance_ == nullptr) {
-    instance_ = new Profiler;
-  }
   return instance_;
 }
 
 void Profiler::SetState(ProfilerState state) {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
+  std::lock_guard<std::mutex> lock{this->m_};
   this->state_ = state;
   // once running, output will be enabled.
   if (state == kRunning)
@@ -69,7 +66,7 @@ void Profiler::SetState(ProfilerState state) {
 }
 
 void Profiler::SetConfig(ProfilerMode mode, std::string output_filename) {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
+  std::lock_guard<std::mutex> lock{this->m_};
   this->mode_ = mode;
   this->filename_ = output_filename;
 }
@@ -98,7 +95,7 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
 
   DevStat& dev_stat = profile_stat[idx];
   {
-    std::lock_guard<std::mutex> lock{Profiler::m_};
+    std::lock_guard<std::mutex> lock{dev_stat.m_};
     dev_stat.opr_exec_stats.push_back(opr_stat);
   }
   return opr_stat;
@@ -130,7 +127,9 @@ void Profiler::EmitEvent(std::ostream *os, const std::string& name,
 
 
 void Profiler::DumpProfile() {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
+  SetState(kNotRunning);
+
+  std::lock_guard<std::mutex> lock{this->m_};
   std::ofstream file;
   file.open(filename_);
 
@@ -147,7 +146,8 @@ void Profiler::DumpProfile() {
 
   bool first_flag = true;
   for (uint32_t i = 0; i < dev_num; ++i) {
-    const DevStat &d = profile_stat[i];
+    DevStat &d = profile_stat[i];
+    std::lock_guard<std::mutex> lock(d.m_);
     uint32_t opr_num = d.opr_exec_stats.size();
 
     for (uint32_t j = 0; j < opr_num; ++j) {
@@ -174,6 +174,8 @@ void Profiler::DumpProfile() {
   file << "    ]," << std::endl;
   file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
   file << "}" << std::endl;
+
+  enable_output_ = false;
 }
 
 

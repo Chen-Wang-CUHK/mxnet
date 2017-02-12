@@ -1,9 +1,12 @@
 MXNet Change Log
 ================
-## NNVM: inprogress refactor branch
+## 0.9.3
 - Move symbolic API to NNVM @tqchen
   - Most front-end C API are backward  compatible
   - Removed symbolic api in MXNet and relies on NNVM
+- New features:
+  - MXNet profiler for profiling operator level executions
+  - mxnet.image package for fast image loading and processing
 - Change of JSON format
   - param and attr field are merged to attr
   - New code is backward compatible can load old json format
@@ -11,8 +14,6 @@ MXNet Change Log
   - New operators are encouraged to register their property to NNVM op registry attribute
 - Known features removed limitations to be fixed
   - Bulk segment execution not yet added.
-  - The gradient aggregation optimization hack by switching to addto is not yet added,
-    can harm LSTM if it is constructed by unrolling the graph
 
 ## v0.8
 This is the last release before the NNVM refactor.
